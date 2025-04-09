@@ -6,12 +6,17 @@
 |   |-- canvas.css           // Canvas-specific styles (optional)
 |   |-- controls.css         // Controls-specific styles (optional)
 |-- script/
-|   |-- script.js            // Main JavaScript
-|   |-- components.js        // Component loader
-|   |-- canvas-handler.js    // Canvas functionality (optional)
+|   |-- script.js               // Main entry point - initializes the app
+|   |-- canvas-handler.js       // Canvas drawing & manipulation functions
+|   |-- page-manager.js         // Page management (add, delete, navigate)
+|   |-- rotation-handler.js     // Touch rotation gestures
+|   |-- export-manager.js       // SVG & HTML export functionality
+|   |-- ui-controller.js        // UI updates and event handlers
+|   |-- utils.js                // Utility functions
 |-- components/
 |   |-- header.html          // Header component
 |   |-- toolbar.html         // Toolbar component
 |   |-- canvas.html          // Canvas container
 |   |-- page-controls.html   // Page controls
 |   |-- preview.html         // Preview section
+|   |-- btn-row.html         // Button row

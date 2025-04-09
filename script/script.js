@@ -1,827 +1,94 @@
+// Main application entry point
 // Wait for all components to be loaded before initializing the app
 document.addEventListener('allComponentsLoaded', function () {
-    // Now initialize the app
     initializeApp();
 });
 
 function initializeApp() {
-    // DOM Elements
-    const canvas = document.getElementById('drawing-canvas');
-    const ctx = canvas.getContext('2d');
-    const strokeWidthInput = document.getElementById('stroke-width');
-    const widthDisplay = document.getElementById('width-display');
-    const pencilTool = document.getElementById('pencil-tool');
-    const brushTool = document.getElementById('brush-tool');
-    const eraserTool = document.getElementById('eraser-tool');
-    const clearBtn = document.getElementById('clear-btn');
-    const undoBtn = document.getElementById('undo-btn');
-    const addPageBtn = document.getElementById('add-page-btn');
-    const publishBtn = document.getElementById('publish-btn');
-    const pageSelect = document.getElementById('page-select');
-    const prevBtn = document.getElementById('prev-btn');
-    const nextBtn = document.getElementById('next-btn');
-    const moveLeftBtn = document.getElementById('move-left-btn');
-    const moveRightBtn = document.getElementById('move-right-btn');
-    const deleteBtn = document.getElementById('delete-btn');
-    const blogPreview = document.getElementById('blog-preview');
-    const blogTitle = document.querySelector('.blog-title');
-    const toast = document.getElementById('toast');
-    const canvasContainer = document.querySelector('.canvas-container');
-    const canvasWrapper = document.getElementById('canvas-wrapper');
-    const rotationIndicator = document.getElementById('rotation-indicator');
-    const resetRotationBtn = document.getElementById('reset-rotation-btn');
-
-    // Variables
-    let isDrawing = false;
-    let lastX = 0;
-    let lastY = 0;
-    let currentTool = 'pencil';
-    let currentWidth = strokeWidthInput.value;
-    let currentPage = 1;
-    let totalPages = 1;
-    let pages = [null]; // Store canvas image data for each page
-    let undoStacks = [[]]; // Store undo history for each page
-    let userDrawings = [null]; // Store only user's drawings without background or lines
-    let pageRotations = [0]; // Store rotation angle for each page
-
-    // Rotation variables
-    let currentRotation = 0;
-    let isRotating = false;
-    let startAngle = 0;
-    let initialDistance = 0;
-    let activeTouchIds = [];
-
-    // A4 Paper Variables (always enabled now)
-    const LINE_SPACING = 30; // Pixels between ruled lines
-    const MARGIN_LEFT = 60; // Left margin in pixels
-    const MARGIN_RIGHT = 40; // Right margin in pixels
-    const MARGIN_TOP = 40; // Top margin in pixels
-    const MARGIN_BOTTOM = 40; // Bottom margin in pixels
-    const LINE_COLOR = 'rgba(173, 216, 230, 0.5)'; // Light blue with opacity
-    const MARGIN_LINE_COLOR = 'rgba(255, 0, 0, 0.2)'; // Light red for margin indicator
-
-    // Initialize
-    function init() {
-        // Always use A4 mode
-        canvasContainer.classList.add('a4-mode');
-
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-        updatePageSelect();
-        updatePageControls();
-
-        // Initialize rotation gesture handlers
-        initRotationHandlers();
-    }
-
-    // Initialize rotation gesture handlers
-    function initRotationHandlers() {
-        canvasWrapper.addEventListener('touchstart', handleTouchStart, { passive: false });
-        canvasWrapper.addEventListener('touchmove', handleTouchMove, { passive: false });
-        canvasWrapper.addEventListener('touchend', handleTouchEnd, { passive: false });
-        canvasWrapper.addEventListener('touchcancel', handleTouchEnd, { passive: false });
-
-        // Reset rotation button
-        resetRotationBtn.addEventListener('click', resetRotation);
-    }
-
-    // Reset rotation to 0 degrees
-    function resetRotation() {
-        currentRotation = 0;
-        pageRotations[currentPage - 1] = 0;
-        applyRotation();
-        showToast('Rotation reset');
-    }
-
-    // Handle touch start for rotation detection
-    function handleTouchStart(e) {
-        // Only detect rotation when 2 or more fingers
-        if (e.touches.length >= 2) {
-            e.preventDefault(); // Prevent default browser behavior
-
-            // We're starting a rotation gesture
-            isRotating = true;
-
-            // Record the IDs of the active touches
-            activeTouchIds = [];
-            for (let i = 0; i < e.touches.length; i++) {
-                activeTouchIds.push(e.touches[i].identifier);
-            }
-
-            // Calculate initial positions
-            const touch1 = e.touches[0];
-            const touch2 = e.touches[1];
-
-            // Store the initial angle between the two touch points
-            const dx = touch2.clientX - touch1.clientX;
-            const dy = touch2.clientY - touch1.clientY;
-            startAngle = Math.atan2(dy, dx) * 180 / Math.PI;
-
-            // Show rotation indicator
-            rotationIndicator.textContent = `${Math.round(currentRotation)}°`;
-            rotationIndicator.classList.add('visible');
-
-            // Disable drawing while rotating
-            isDrawing = false;
+    // Initialize application state
+    const appState = {
+        // DOM Elements
+        elements: {
+            canvas: document.getElementById('drawing-canvas'),
+            ctx: document.getElementById('drawing-canvas').getContext('2d'),
+            strokeWidthInput: document.getElementById('stroke-width'),
+            widthDisplay: document.getElementById('width-display'),
+            pencilTool: document.getElementById('pencil-tool'),
+            brushTool: document.getElementById('brush-tool'),
+            eraserTool: document.getElementById('eraser-tool'),
+            clearBtn: document.getElementById('clear-btn'),
+            undoBtn: document.getElementById('undo-btn'),
+            addPageBtn: document.getElementById('add-page-btn'),
+            saveSvgBtn: document.getElementById('save-svg-btn'),
+            publishBtn: document.getElementById('publish-btn'),
+            pageSelect: document.getElementById('page-select'),
+            prevBtn: document.getElementById('prev-btn'),
+            nextBtn: document.getElementById('next-btn'),
+            moveLeftBtn: document.getElementById('move-left-btn'),
+            moveRightBtn: document.getElementById('move-right-btn'),
+            deleteBtn: document.getElementById('delete-btn'),
+            blogPreview: document.getElementById('blog-preview'),
+            blogTitle: document.querySelector('.blog-title'),
+            toast: document.getElementById('toast'),
+            canvasContainer: document.querySelector('.canvas-container'),
+            canvasWrapper: document.getElementById('canvas-wrapper'),
+            rotationIndicator: document.getElementById('rotation-indicator'),
+            resetRotationBtn: document.getElementById('reset-rotation-btn')
+        },
+        
+        // Canvas state
+        canvas: {
+            isDrawing: false,
+            lastX: 0,
+            lastY: 0,
+            currentTool: 'pencil',
+            currentWidth: document.getElementById('stroke-width').value
+        },
+        
+        // Page state
+        pages: {
+            currentPage: 1,
+            totalPages: 1,
+            pages: [null], // Store canvas image data for each page
+            undoStacks: [[]], // Store undo history for each page
+            userDrawings: [null], // Store only user's drawings without background or lines
+        },
+        
+        // Rotation state
+        rotation: {
+            currentRotation: 0,
+            isRotating: false,
+            startAngle: 0,
+            initialDistance: 0,
+            activeTouchIds: [],
+            pageRotations: [0] // Store rotation angle for each page
+        },
+        
+        // Paper settings
+        paper: {
+            LINE_SPACING: 30, // Pixels between ruled lines
+            MARGIN_LEFT: 60, // Left margin in pixels
+            MARGIN_RIGHT: 40, // Right margin in pixels
+            MARGIN_TOP: 40, // Top margin in pixels
+            MARGIN_BOTTOM: 40, // Bottom margin in pixels
+            LINE_COLOR: 'rgba(173, 216, 230, 0.5)', // Light blue with opacity
+            MARGIN_LINE_COLOR: 'rgba(255, 0, 0, 0.2)' // Light red for margin indicator
         }
-    }
-
-    // Handle touch move for rotation
-    function handleTouchMove(e) {
-        if (isRotating && e.touches.length >= 2) {
-            e.preventDefault(); // Prevent default browser behavior
-
-            // Find the two touch points we're tracking
-            let touch1, touch2;
-            let foundTouches = 0;
-
-            // Look for our tracked touch points using their IDs
-            for (let i = 0; i < e.touches.length; i++) {
-                if (activeTouchIds.includes(e.touches[i].identifier)) {
-                    if (foundTouches === 0) touch1 = e.touches[i];
-                    else if (foundTouches === 1) touch2 = e.touches[i];
-                    foundTouches++;
-                    if (foundTouches >= 2) break;
-                }
-            }
-
-            // If we found our two tracked points
-            if (foundTouches >= 2) {
-                // Calculate current angle
-                const dx = touch2.clientX - touch1.clientX;
-                const dy = touch2.clientY - touch1.clientY;
-                const currentAngle = Math.atan2(dy, dx) * 180 / Math.PI;
-
-                // Calculate rotation change
-                let angleDiff = currentAngle - startAngle;
-
-                // Update current rotation (with some smoothing)
-                currentRotation = (currentRotation + angleDiff) % 360;
-
-                // Save rotation for this page
-                pageRotations[currentPage - 1] = currentRotation;
-
-                // Reset start angle for incremental rotation
-                startAngle = currentAngle;
-
-                // Apply the rotation
-                applyRotation();
-
-                // Update rotation indicator
-                rotationIndicator.textContent = `${Math.round(currentRotation)}°`;
-            }
-        }
-    }
-
-    // Handle touch end for rotation
-    function handleTouchEnd(e) {
-        if (isRotating) {
-            // Check if we still have 2 or more touches
-            if (e.touches.length < 2) {
-                isRotating = false;
-
-                // Hide rotation indicator after a delay
-                setTimeout(() => {
-                    rotationIndicator.classList.remove('visible');
-                }, 1000);
-            }
-        }
-    }
-
-    // Apply current rotation to the canvas wrapper
-    function applyRotation() {
-        canvasWrapper.style.transform = `rotate(${currentRotation}deg)`;
-    }
-
-    // Adjust mouse/touch coordinates based on rotation
-    // Adjust mouse/touch coordinates based on rotation
-    function adjustCoordsForRotation(x, y) {
-        // If there's no rotation, return coordinates as is
-        if (currentRotation === 0) {
-            return { x, y };
-        }
-
-        // Get the canvas rectangle
-        const rect = canvas.getBoundingClientRect();
-
-        // Calculate center relative to the canvas element itself, not its bounding rect
-        const centerX = canvas.width / 2;
-        const centerY = canvas.height / 2;
-
-        // Convert touch coordinates to be relative to the center of the canvas
-        const relativeX = x - (rect.width / 2);
-        const relativeY = y - (rect.height / 2);
-
-        // Convert rotation from degrees to radians
-        const angleInRadians = currentRotation * Math.PI / 180;
-
-        // Apply inverse rotation matrix
-        const rotatedX = relativeX * Math.cos(angleInRadians) + relativeY * Math.sin(angleInRadians);
-        const rotatedY = -relativeX * Math.sin(angleInRadians) + relativeY * Math.cos(angleInRadians);
-
-        // Return coordinates relative to canvas origin (0,0)
-        return {
-            x: rotatedX + centerX,
-            y: rotatedY + centerY
-        };
-    }
-
-    // Set canvas size based on A4 dimensions
-    function resizeCanvas() {
-        const container = canvas.parentElement.parentElement;
-
-        // Always prioritize using full width for A4
-        canvas.width = container.clientWidth;
-        // Calculate height based on A4 aspect ratio (1:1.414)
-        canvas.height = canvas.width * 1.414;
-
-        // Scroll to top to ensure paper top is visible
-        container.scrollTop = 0;
-
-        redrawCanvas();
-    }
-
-    // Redraw canvas with current page content and ruled lines
-    function redrawCanvas() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Always draw ruled lines first
-        drawRuledLines();
-
-        // Draw page content
-        if (userDrawings[currentPage - 1]) {
-            // Draw just the user's drawings on top of ruled lines
-            ctx.drawImage(userDrawings[currentPage - 1], 0, 0);
-        }
-
-        // Apply the saved rotation for this page
-        currentRotation = pageRotations[currentPage - 1] || 0;
-        applyRotation();
-    }
-
-    // Draw ruled lines and margins
-    function drawRuledLines() {
-        // Fill with very light background color to simulate paper
-        ctx.fillStyle = 'rgba(252, 252, 250, 1)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Draw horizontal ruled lines
-        ctx.beginPath();
-        ctx.strokeStyle = LINE_COLOR;
-        ctx.lineWidth = 1;
-
-        // Start from the top margin and draw lines with even spacing
-        for (let y = MARGIN_TOP; y < canvas.height - MARGIN_BOTTOM; y += LINE_SPACING) {
-            ctx.moveTo(MARGIN_LEFT, y);
-            ctx.lineTo(canvas.width - MARGIN_RIGHT, y);
-        }
-        ctx.stroke();
-
-        // Draw margin line
-        ctx.beginPath();
-        ctx.strokeStyle = MARGIN_LINE_COLOR;
-        ctx.lineWidth = 1;
-
-        // Left margin vertical line
-        ctx.moveTo(MARGIN_LEFT, MARGIN_TOP);
-        ctx.lineTo(MARGIN_LEFT, canvas.height - MARGIN_BOTTOM);
-
-        // Top margin horizontal line
-        ctx.moveTo(MARGIN_LEFT, MARGIN_TOP);
-        ctx.lineTo(canvas.width - MARGIN_RIGHT, MARGIN_TOP);
-
-        // Bottom margin horizontal line
-        ctx.moveTo(MARGIN_LEFT, canvas.height - MARGIN_BOTTOM);
-        ctx.lineTo(canvas.width - MARGIN_RIGHT, canvas.height - MARGIN_BOTTOM);
-
-        ctx.stroke();
-    }
-
-    // Capture user drawings only
-    function captureUserDrawings() {
-        // If there are no drawings yet
-        if (!pages[currentPage - 1]) {
-            return null;
-        }
-
-        // Create an off-screen canvas to process the content
-        const tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
-        const tempCtx = tempCanvas.getContext('2d');
-
-        // First, get the full canvas with background and lines
-        tempCtx.drawImage(canvas, 0, 0);
-
-        // Now recreate a clean version with just the drawings
-        const cleanCanvas = document.createElement('canvas');
-        cleanCanvas.width = canvas.width;
-        cleanCanvas.height = canvas.height;
-        const cleanCtx = cleanCanvas.getContext('2d');
-
-        // Fill with plain white background
-        cleanCtx.fillStyle = 'white';
-        cleanCtx.fillRect(0, 0, cleanCanvas.width, cleanCanvas.height);
-
-        // Get pixel data to process
-        const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
-        const data = imageData.data;
-
-        // Create a new image data object for the clean version
-        const cleanImageData = cleanCtx.createImageData(cleanCanvas.width, cleanCanvas.height);
-        const cleanData = cleanImageData.data;
-
-        // Color ranges for the ruled lines and background
-        const isBackgroundOrLine = (r, g, b) => {
-            // Check if it's the white/off-white background
-            const isWhitish = r > 250 && g > 250 && b > 248;
-
-            // Check if it's a blue ruled line (approximate)
-            const isRuledLine = r > 165 && r < 180 && g > 210 && g < 225 && b > 225 && b < 240;
-
-            // Check if it's a red margin line (approximate)
-            const isMarginLine = r > 250 && g < 10 && b < 10;
-
-            return isWhitish || isRuledLine || isMarginLine;
-        };
-
-        // Copy non-background, non-line pixels to the clean image
-        for (let i = 0; i < data.length; i += 4) {
-            if (!isBackgroundOrLine(data[i], data[i + 1], data[i + 2]) && data[i + 3] > 0) {
-                cleanData[i] = data[i];       // R
-                cleanData[i + 1] = data[i + 1];   // G
-                cleanData[i + 2] = data[i + 2];   // B
-                cleanData[i + 3] = data[i + 3];   // A
-            }
-        }
-
-        // Put the processed image data onto the clean canvas
-        cleanCtx.putImageData(cleanImageData, 0, 0);
-
-        return cleanCanvas;
-    }
-
-    // Save current canvas state to undo stack
-    function saveState() {
-        const currentState = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        undoStacks[currentPage - 1].push(currentState);
-
-        // Limit stack size
-        if (undoStacks[currentPage - 1].length > 10) {
-            undoStacks[currentPage - 1].shift();
-        }
-
-        // Save the full canvas with background and lines
-        pages[currentPage - 1] = ctx.getImageData(0, 0, canvas.width, canvas.height);
-
-        // Save just the user's drawings
-        userDrawings[currentPage - 1] = captureUserDrawings();
-
-        // Save the rotation angle
-        pageRotations[currentPage - 1] = currentRotation;
-    }
-
-    // Undo last action
-    function undo() {
-        if (undoStacks[currentPage - 1].length <= 1) {
-            // Clear if only initial state
-            clearCanvas();
-            return;
-        }
-
-        // Remove current state
-        undoStacks[currentPage - 1].pop();
-
-        // Restore previous state
-        if (undoStacks[currentPage - 1].length > 0) {
-            const prevState = undoStacks[currentPage - 1][undoStacks[currentPage - 1].length - 1];
-            ctx.putImageData(prevState, 0, 0);
-
-            // Update user drawings
-            userDrawings[currentPage - 1] = captureUserDrawings();
-        } else {
-            clearCanvas();
-        }
-    }
-
-    // Clear canvas
-    function clearCanvas() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Always redraw the ruled lines
-        drawRuledLines();
-
-        undoStacks[currentPage - 1] = [];
-        userDrawings[currentPage - 1] = null;
-        saveState(); // Save the clear state
-    }
-
-    // Add a new page
-    function addPage() {
-        // Save current page
-        pages[currentPage - 1] = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        userDrawings[currentPage - 1] = captureUserDrawings();
-        pageRotations[currentPage - 1] = currentRotation;
-
-        // Add new page
-        totalPages++;
-        currentPage = totalPages;
-        pages.push(null);
-        userDrawings.push(null);
-        undoStacks.push([]);
-        pageRotations.push(0); // New page starts with 0 degrees rotation
-
-        // Reset rotation for new page
-        currentRotation = 0;
-        applyRotation();
-
-        // Clear canvas for new page
-        clearCanvas();
-
-        // Update UI
-        updatePageSelect();
-        updatePageControls();
-        showToast('New page added');
-    }
-
-    // Switch to page
-    function switchPage(pageNum) {
-        if (pageNum < 1 || pageNum > totalPages) return;
-
-        // Save current page
-        pages[currentPage - 1] = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        userDrawings[currentPage - 1] = captureUserDrawings();
-        pageRotations[currentPage - 1] = currentRotation;
-
-        // Switch to selected page
-        currentPage = pageNum;
-
-        // Set rotation for the selected page
-        currentRotation = pageRotations[currentPage - 1] || 0;
-        applyRotation();
-
-        // Redraw canvas
-        redrawCanvas();
-
-        // Update UI
-        updatePageSelect();
-        updatePageControls();
-    }
-
-    // Move current page to a new position
-    function movePage(direction) {
-        // Save current page
-        pages[currentPage - 1] = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        userDrawings[currentPage - 1] = captureUserDrawings();
-        pageRotations[currentPage - 1] = currentRotation;
-
-        let newPosition;
-        if (direction === 'left' && currentPage > 1) {
-            newPosition = currentPage - 1;
-        } else if (direction === 'right' && currentPage < totalPages) {
-            newPosition = currentPage + 1;
-        } else {
-            return; // Invalid move
-        }
-
-        // Get the page being moved
-        const movingPage = pages[currentPage - 1];
-        const movingDrawings = userDrawings[currentPage - 1];
-        const movingUndoStack = undoStacks[currentPage - 1];
-        const movingRotation = pageRotations[currentPage - 1];
-
-        // Remove from current position
-        pages.splice(currentPage - 1, 1);
-        userDrawings.splice(currentPage - 1, 1);
-        undoStacks.splice(currentPage - 1, 1);
-        pageRotations.splice(currentPage - 1, 1);
-
-        // Insert at new position
-        pages.splice(newPosition - 1, 0, movingPage);
-        userDrawings.splice(newPosition - 1, 0, movingDrawings);
-        undoStacks.splice(newPosition - 1, 0, movingUndoStack);
-        pageRotations.splice(newPosition - 1, 0, movingRotation);
-
-        // Update current page reference
-        currentPage = newPosition;
-
-        // Update UI
-        updatePageSelect();
-        updatePageControls();
-        showToast(`Page moved to position ${newPosition}`);
-    }
-
-    // Delete current page
-    function deletePage() {
-        if (totalPages <= 1) {
-            showToast('Cannot delete the only page');
-            return;
-        }
-
-        // Remove page
-        pages.splice(currentPage - 1, 1);
-        userDrawings.splice(currentPage - 1, 1);
-        undoStacks.splice(currentPage - 1, 1);
-        pageRotations.splice(currentPage - 1, 1);
-        totalPages--;
-
-        // Adjust current page if needed
-        if (currentPage > totalPages) {
-            currentPage = totalPages;
-        }
-
-        // Set rotation for the current page
-        currentRotation = pageRotations[currentPage - 1] || 0;
-        applyRotation();
-
-        // Redraw canvas
-        redrawCanvas();
-
-        // Update UI
-        updatePageSelect();
-        updatePageControls();
-        showToast('Page deleted');
-    }
-
-    // Update page dropdown
-    function updatePageSelect() {
-        pageSelect.innerHTML = '';
-
-        for (let i = 0; i < totalPages; i++) {
-            const option = document.createElement('option');
-            option.value = i + 1;
-            option.textContent = `Page ${i + 1}`;
-
-            if (i + 1 === currentPage) {
-                option.selected = true;
-            }
-
-            pageSelect.appendChild(option);
-        }
-    }
-
-    // Update page navigation controls
-    function updatePageControls() {
-        prevBtn.disabled = currentPage <= 1;
-        nextBtn.disabled = currentPage >= totalPages;
-        moveLeftBtn.disabled = currentPage <= 1;
-        moveRightBtn.disabled = currentPage >= totalPages;
-        deleteBtn.disabled = totalPages <= 1;
-    }
-
-    // Show toast notification
-    function showToast(message) {
-        toast.textContent = message;
-        toast.style.display = 'block';
-
-        setTimeout(() => {
-            toast.style.display = 'none';
-        }, 2000);
-    }
-
-    // Generate blog preview using only the user drawings (no ruled lines)
-    function generatePreview() {
-        // Save current page first
-        pages[currentPage - 1] = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        userDrawings[currentPage - 1] = captureUserDrawings();
-        pageRotations[currentPage - 1] = currentRotation;
-
-        let blogHTML = '';
-
-        for (let i = 0; i < totalPages; i++) {
-            const pageNum = i + 1;
-
-            // Create a temporary canvas for the clean version
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = canvas.width;
-            tempCanvas.height = canvas.height;
-            const tempCtx = tempCanvas.getContext('2d');
-
-            // Fill with white background
-            tempCtx.fillStyle = 'white';
-            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-
-            // Draw just the user's drawings if available
-            if (userDrawings[i]) {
-                tempCtx.drawImage(userDrawings[i], 0, 0);
-            }
-
-            // Get image as data URL
-            const imageUrl = tempCanvas.toDataURL('image/png');
-
-            // Add image to the preview
-            blogHTML += `
-                <img src="${imageUrl}" alt="Handwritten content page ${pageNum}">
-            `;
-        }
-
-        // Update the preview
-        blogPreview.innerHTML = blogHTML;
-    }
-
-    // Publish blog
-    function publishBlog() {
-        generatePreview();
-        const title = blogTitle.value || 'Untitled Blog';
-        showToast(`Handwritten blog "${title}" published! (Simulated)`);
-    }
-
-    // Start drawing
-    function startDrawing(e) {
-        // Don't start drawing if we're in rotation mode
-        if (isRotating || (e.touches && e.touches.length >= 2)) {
-            return;
-        }
-
-        isDrawing = true;
-        const pos = getPointerPosition(e);
-        lastX = pos.x;
-        lastY = pos.y;
-
-        // Save state for undo
-        if (undoStacks[currentPage - 1].length === 0) {
-            saveState();
-        }
-    }
-
-    // Draw on the canvas
-    function draw(e) {
-        if (!isDrawing || isRotating) return;
-        e.preventDefault();
-
-        const pos = getPointerPosition(e);
-        let x = pos.x;
-        let y = pos.y;
-
-        ctx.lineJoin = 'round';
-        ctx.lineCap = 'round';
-
-        // Drawing based on tool
-        if (currentTool === 'pencil') {
-            // Pencil with texture
-            for (let i = 0; i < 3; i++) {
-                ctx.beginPath();
-                ctx.moveTo(
-                    lastX + (Math.random() * 2 - 1) * 0.5,
-                    lastY + (Math.random() * 2 - 1) * 0.5
-                );
-                ctx.lineTo(
-                    x + (Math.random() * 2 - 1) * 0.5,
-                    y + (Math.random() * 2 - 1) * 0.5
-                );
-
-                // Get pressure if available
-                let pressure = e.pressure !== undefined ? e.pressure : 0.7;
-                if (pressure === 0) pressure = 0.3; // Minimum pressure
-
-                // Adjust width and opacity based on pressure
-                const width = currentWidth * pressure;
-                const opacity = Math.min(0.3 + pressure * 0.5, 0.9);
-
-                ctx.strokeStyle = `rgba(51, 51, 51, ${opacity})`;
-                ctx.lineWidth = width * (0.8 + Math.random() * 0.2);
-                ctx.stroke();
-            }
-        } else if (currentTool === 'brush') {
-            // Brush with pressure sensitivity
-            let pressure = e.pressure !== undefined ? e.pressure : 0.7;
-            if (pressure === 0) pressure = 0.3; // Minimum pressure
-
-            // Wider, softer stroke for brush
-            ctx.beginPath();
-            ctx.moveTo(lastX, lastY);
-            ctx.lineTo(x, y);
-
-            ctx.lineWidth = currentWidth * 1.5 * pressure;
-            ctx.strokeStyle = `rgba(51, 51, 51, ${0.2 + pressure * 0.3})`;
-            ctx.stroke();
-
-            // Darker center
-            ctx.beginPath();
-            ctx.moveTo(lastX, lastY);
-            ctx.lineTo(x, y);
-            ctx.lineWidth = currentWidth * pressure * 0.7;
-            ctx.strokeStyle = `rgba(51, 51, 51, ${0.4 + pressure * 0.4})`;
-            ctx.stroke();
-        } else if (currentTool === 'eraser') {
-            // Eraser
-            ctx.beginPath();
-            ctx.moveTo(lastX, lastY);
-            ctx.lineTo(x, y);
-            ctx.lineWidth = currentWidth * 2;
-            ctx.globalCompositeOperation = 'destination-out';
-            ctx.stroke();
-            ctx.globalCompositeOperation = 'source-over';
-        }
-
-        lastX = x;
-        lastY = y;
-    }
-
-    // Stop drawing
-    function stopDrawing() {
-        if (isDrawing) {
-            isDrawing = false;
-            saveState();
-        }
-    }
-
-    // Get pointer position
-    function getPointerPosition(e) {
-        const rect = canvas.getBoundingClientRect();
-        let x, y;
-
-        if (e.type.includes('touch')) {
-            const touch = e.touches[0] || e.changedTouches[0];
-            x = touch.clientX - rect.left;
-            y = touch.clientY - rect.top;
-        } else {
-            x = e.clientX - rect.left;
-            y = e.clientY - rect.top;
-        }
-
-        // Adjust coordinates for rotation
-        if (currentRotation !== 0) {
-            const adjusted = adjustCoordsForRotation(x, y);
-            x = adjusted.x;
-            y = adjusted.y;
-        }
-
-        return { x, y };
-    }
-
-    // Event Listeners
-    strokeWidthInput.addEventListener('input', function () {
-        currentWidth = this.value;
-        widthDisplay.textContent = `${this.value}px`;
-    });
-
-    pencilTool.addEventListener('click', function () {
-        currentTool = 'pencil';
-        pencilTool.classList.add('active');
-        brushTool.classList.remove('active');
-        eraserTool.classList.remove('active');
-        canvas.style.cursor = 'url(\'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="2" x2="22" y2="6"></line><path d="M7.5 20.5L19 9l-4-4L3.5 16.5 2 22z"></path></svg>\') 0 24, crosshair';
-    });
-
-    brushTool.addEventListener('click', function () {
-        currentTool = 'brush';
-        brushTool.classList.add('active');
-        pencilTool.classList.remove('active');
-        eraserTool.classList.remove('active');
-        canvas.style.cursor = 'url(\'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 9.5V5h-4.5"></path><path d="M5 19.5l-.5-.5L19 4.5l.5.5L5 19.5z"></path><path d="M5 15v4h4"></path></svg>\') 0 24, crosshair';
-    });
-
-    eraserTool.addEventListener('click', function () {
-        currentTool = 'eraser';
-        eraserTool.classList.add('active');
-        pencilTool.classList.remove('active');
-        brushTool.classList.remove('active');
-        canvas.style.cursor = 'url(\'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><path d="M15 3h6v6"></path><path d="M10 14L21 3"></path></svg>\') 0 24, cell';
-    });
-
-    clearBtn.addEventListener('click', clearCanvas);
-    undoBtn.addEventListener('click', undo);
-    addPageBtn.addEventListener('click', addPage);
-    publishBtn.addEventListener('click', publishBlog);
-
-    pageSelect.addEventListener('change', function () {
-        switchPage(parseInt(this.value));
-    });
-
-    prevBtn.addEventListener('click', function () {
-        if (currentPage > 1) {
-            switchPage(currentPage - 1);
-        }
-    });
-
-    nextBtn.addEventListener('click', function () {
-        if (currentPage < totalPages) {
-            switchPage(currentPage + 1);
-        } else {
-            addPage();
-        }
-    });
-
-    moveLeftBtn.addEventListener('click', function () {
-        movePage('left');
-    });
-
-    moveRightBtn.addEventListener('click', function () {
-        movePage('right');
-    });
-
-    deleteBtn.addEventListener('click', deletePage);
-
-    // Setup pointer events for drawing
-    canvas.style.touchAction = 'none';
-    canvas.addEventListener('pointerdown', startDrawing);
-    canvas.addEventListener('pointermove', draw);
-    canvas.addEventListener('pointerup', stopDrawing);
-    canvas.addEventListener('pointerout', stopDrawing);
-
-    // Initialize
-    init();
-    saveState(); // Save initial state
+    };
+    
+    // Initialize modules
+    const canvasHandler = initCanvasHandler(appState);
+    const rotationHandler = initRotationHandler(appState, canvasHandler);
+    const pageManager = initPageManager(appState, canvasHandler);
+    const exportManager = initExportManager(appState, canvasHandler);
+    const uiController = initUIController(appState, canvasHandler, rotationHandler, pageManager, exportManager);
+    
+    // Setup initial state
+    canvasHandler.resizeCanvas();
+    window.addEventListener('resize', canvasHandler.resizeCanvas);
+    pageManager.updatePageSelect();
+    pageManager.updatePageControls();
+    
+    // Save initial state
+    canvasHandler.saveState();
 }
-

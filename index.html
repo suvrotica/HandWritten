@@ -22,7 +22,17 @@
 
     <div class="toast" id="toast">Changes saved!</div>
 
-    <!-- Load components first, then main script -->
+    <!-- Load utility modules first -->
+    <script src="/script/utils.js"></script>
+    
+    <!-- Load feature modules -->
+    <script src="/script/canvas-handler.js"></script>
+    <script src="/script/rotation-handler.js"></script>
+    <script src="/script/page-manager.js"></script>
+    <script src="/script/export-manager.js"></script>
+    <script src="/script/ui-controller.js"></script>
+    
+    <!-- Load component loader, then main script -->
     <script src="/script/components.js"></script>
     <script src="/script/script.js"></script>
 </body>
