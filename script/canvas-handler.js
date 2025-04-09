@@ -105,9 +105,8 @@ function initCanvasHandler(appState) {
             cleanCanvas.height = canvas.height;
             const cleanCtx = cleanCanvas.getContext('2d');
             
-            // Fill with plain white background
-            cleanCtx.fillStyle = 'white';
-            cleanCtx.fillRect(0, 0, cleanCanvas.width, cleanCanvas.height);
+            // Fill with transparent background instead of white
+            cleanCtx.clearRect(0, 0, cleanCanvas.width, cleanCanvas.height);
             
             // Get pixel data to process
             const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);

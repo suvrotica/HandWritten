@@ -50,7 +50,7 @@ function initPageManager(appState, canvasHandler) {
             rotation.currentRotation = rotation.pageRotations[pages.currentPage - 1] || 0;
             canvasHandler.applyRotation();
             
-            // Redraw canvas
+            // Redraw canvas - this should include ruled lines thanks to our redrawCanvas fix
             canvasHandler.redrawCanvas();
             
             // Update UI
@@ -163,6 +163,11 @@ function initPageManager(appState, canvasHandler) {
         
         // Generate page preview for a specific page
         generatePagePreview: function(pageIndex) {
+            // If there are no user drawings for this page, return null
+            if (!pages.userDrawings[pageIndex]) {
+                return null;
+            }
+            
             // Create a temporary canvas for the clean version
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = canvas.width;
@@ -174,9 +179,7 @@ function initPageManager(appState, canvasHandler) {
             tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
             
             // Draw just the user's drawings if available
-            if (pages.userDrawings[pageIndex]) {
-                tempCtx.drawImage(pages.userDrawings[pageIndex], 0, 0);
-            }
+            tempCtx.drawImage(pages.userDrawings[pageIndex], 0, 0);
             
             // Get image as data URL
             return tempCanvas.toDataURL('image/png');

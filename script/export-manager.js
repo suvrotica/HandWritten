@@ -11,16 +11,22 @@ function initExportManager(appState, canvasHandler) {
             
             let blogHTML = '';
             
-            for (let i = 0; i < pageData.totalPages; i++) {
-                const pageNum = i + 1;
-                
-                // Get image URL for this page
-                const imageUrl = appState.pageManager.generatePagePreview(i);
-                
-                // Add image to the preview
-                blogHTML += `
-                    <img src="${imageUrl}" alt="Handwritten content page ${pageNum}">
-                `;
+            if (pageData.totalPages === 0 || (pageData.userDrawings.every(drawing => drawing === null))) {
+                blogHTML = '<p>Your handwritten blog will be published as-is, preserving your natural writing style.</p>';
+            } else {
+                for (let i = 0; i < pageData.totalPages; i++) {
+                    const pageNum = i + 1;
+                    
+                    // Get image URL for this page
+                    const imageUrl = appState.pageManager.generatePagePreview(i);
+                    
+                    if (imageUrl) {
+                        // Add image to the preview
+                        blogHTML += `
+                            <img src="${imageUrl}" alt="Handwritten content page ${pageNum}">
+                        `;
+                    }
+                }
             }
             
             // Update the preview
@@ -258,17 +264,19 @@ function initExportManager(appState, canvasHandler) {
         <h1>${title}</h1>
         <p class="date">Published on ${new Date().toLocaleDateString()}</p>
     </header>`;
-            
+    
             // Add each page to the HTML
             for (let i = 0; i < pageData.totalPages; i++) {
                 // Get image URL for this page
                 const imageUrl = appState.pageManager.generatePagePreview(i);
                 
-                // Add to HTML
-                blogHTML += `
+                if (imageUrl) {
+                    // Add to HTML
+                    blogHTML += `
     <div class="page">
         <img src="${imageUrl}" alt="Page ${i+1}">
     </div>`;
+                }
             }
             
             // Close HTML
