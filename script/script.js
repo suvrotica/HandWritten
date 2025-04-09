@@ -16,7 +16,6 @@ function initializeApp() {
     const clearBtn = document.getElementById('clear-btn');
     const undoBtn = document.getElementById('undo-btn');
     const addPageBtn = document.getElementById('add-page-btn');
-    const saveBtn = document.getElementById('save-btn');
     const publishBtn = document.getElementById('publish-btn');
     const pageSelect = document.getElementById('page-select');
     const prevBtn = document.getElementById('prev-btn');
@@ -27,10 +26,6 @@ function initializeApp() {
     const blogPreview = document.getElementById('blog-preview');
     const blogTitle = document.querySelector('.blog-title');
     const toast = document.getElementById('toast');
-
-    // A4 Paper Elements
-    const a4Toggle = document.getElementById('a4-paper-toggle');
-    const toggleLinesBtn = document.getElementById('toggle-lines-btn');
     const canvasContainer = document.querySelector('.canvas-container');
 
     // Variables
@@ -43,11 +38,9 @@ function initializeApp() {
     let totalPages = 1;
     let pages = [null]; // Store canvas image data for each page
     let undoStacks = [[]]; // Store undo history for each page
+    let userDrawings = [null]; // Store only user's drawings without background or lines
 
-    // A4 Paper Variables
-    let isA4Mode = true;
-    let showRuledLines = true;
-    const A4_ASPECT_RATIO = 1 / 1.414; // Standard A4 ratio
+    // A4 Paper Variables (always enabled now)
     const LINE_SPACING = 30; // Pixels between ruled lines
     const MARGIN_LEFT = 60; // Left margin in pixels
     const MARGIN_RIGHT = 40; // Right margin in pixels
@@ -58,10 +51,8 @@ function initializeApp() {
 
     // Initialize
     function init() {
-        // Set toggleLinesBtn to active initially
-        if (toggleLinesBtn) {
-            toggleLinesBtn.classList.add('active');
-        }
+        // Always use A4 mode
+        canvasContainer.classList.add('a4-mode');
         
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
@@ -69,39 +60,32 @@ function initializeApp() {
         updatePageControls();
     }
 
+    // Set canvas size based on A4 dimensions
     function resizeCanvas() {
         const container = canvas.parentElement;
         
-        if (isA4Mode) {
-            canvasContainer.classList.add('a4-mode');
-            // Always prioritize using full width for A4
-            canvas.width = container.clientWidth;
-            // Calculate height based on A4 aspect ratio
-            canvas.height = canvas.width * 1.414;
-            
-            // Scroll to top to ensure paper top is visible
-            container.scrollTop = 0;
-        } else {
-            canvasContainer.classList.remove('a4-mode');
-            canvas.width = container.clientWidth;
-            canvas.height = container.clientHeight;
-        }
+        // Always prioritize using full width for A4
+        canvas.width = container.clientWidth;
+        // Calculate height based on A4 aspect ratio (1:1.414)
+        canvas.height = canvas.width * 1.414;
+        
+        // Scroll to top to ensure paper top is visible
+        container.scrollTop = 0;
         
         redrawCanvas();
     }
 
-    // Redraw canvas with current page content and ruled lines if enabled
+    // Redraw canvas with current page content and ruled lines
     function redrawCanvas() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Draw ruled lines if enabled
-        if (isA4Mode && showRuledLines) {
-            drawRuledLines();
-        }
+        // Always draw ruled lines first
+        drawRuledLines();
         
         // Draw page content
-        if (pages[currentPage - 1]) {
-            ctx.putImageData(pages[currentPage - 1], 0, 0);
+        if (userDrawings[currentPage - 1]) {
+            // Draw just the user's drawings on top of ruled lines
+            ctx.drawImage(userDrawings[currentPage - 1], 0, 0);
         }
     }
 
@@ -143,6 +127,70 @@ function initializeApp() {
         ctx.stroke();
     }
 
+    // Capture user drawings only
+    function captureUserDrawings() {
+        // If there are no drawings yet
+        if (!pages[currentPage - 1]) {
+            return null;
+        }
+        
+        // Create an off-screen canvas to process the content
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        // First, get the full canvas with background and lines
+        tempCtx.drawImage(canvas, 0, 0);
+        
+        // Now recreate a clean version with just the drawings
+        const cleanCanvas = document.createElement('canvas');
+        cleanCanvas.width = canvas.width;
+        cleanCanvas.height = canvas.height;
+        const cleanCtx = cleanCanvas.getContext('2d');
+        
+        // Fill with plain white background
+        cleanCtx.fillStyle = 'white';
+        cleanCtx.fillRect(0, 0, cleanCanvas.width, cleanCanvas.height);
+        
+        // Get pixel data to process
+        const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+        const data = imageData.data;
+        
+        // Create a new image data object for the clean version
+        const cleanImageData = cleanCtx.createImageData(cleanCanvas.width, cleanCanvas.height);
+        const cleanData = cleanImageData.data;
+        
+        // Color ranges for the ruled lines and background
+        const isBackgroundOrLine = (r, g, b) => {
+            // Check if it's the white/off-white background
+            const isWhitish = r > 250 && g > 250 && b > 248;
+            
+            // Check if it's a blue ruled line (approximate)
+            const isRuledLine = r > 165 && r < 180 && g > 210 && g < 225 && b > 225 && b < 240;
+            
+            // Check if it's a red margin line (approximate)
+            const isMarginLine = r > 250 && g < 10 && b < 10;
+            
+            return isWhitish || isRuledLine || isMarginLine;
+        };
+        
+        // Copy non-background, non-line pixels to the clean image
+        for (let i = 0; i < data.length; i += 4) {
+            if (!isBackgroundOrLine(data[i], data[i+1], data[i+2]) && data[i+3] > 0) {
+                cleanData[i] = data[i];       // R
+                cleanData[i+1] = data[i+1];   // G
+                cleanData[i+2] = data[i+2];   // B
+                cleanData[i+3] = data[i+3];   // A
+            }
+        }
+        
+        // Put the processed image data onto the clean canvas
+        cleanCtx.putImageData(cleanImageData, 0, 0);
+        
+        return cleanCanvas;
+    }
+
     // Save current canvas state to undo stack
     function saveState() {
         const currentState = ctx.getImageData(0, 0, canvas.width, canvas.height);
@@ -152,14 +200,19 @@ function initializeApp() {
         if (undoStacks[currentPage - 1].length > 10) {
             undoStacks[currentPage - 1].shift();
         }
+        
+        // Save the full canvas with background and lines
+        pages[currentPage - 1] = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // Save just the user's drawings
+        userDrawings[currentPage - 1] = captureUserDrawings();
     }
 
     // Undo last action
     function undo() {
         if (undoStacks[currentPage - 1].length <= 1) {
             // Clear if only initial state
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            undoStacks[currentPage - 1] = [];
+            clearCanvas();
             return;
         }
 
@@ -170,8 +223,11 @@ function initializeApp() {
         if (undoStacks[currentPage - 1].length > 0) {
             const prevState = undoStacks[currentPage - 1][undoStacks[currentPage - 1].length - 1];
             ctx.putImageData(prevState, 0, 0);
+            
+            // Update user drawings
+            userDrawings[currentPage - 1] = captureUserDrawings();
         } else {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            clearCanvas();
         }
     }
 
@@ -179,12 +235,11 @@ function initializeApp() {
     function clearCanvas() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        // Redraw ruled lines if enabled
-        if (isA4Mode && showRuledLines) {
-            drawRuledLines();
-        }
+        // Always redraw the ruled lines
+        drawRuledLines();
         
         undoStacks[currentPage - 1] = [];
+        userDrawings[currentPage - 1] = null;
         saveState(); // Save the clear state
     }
 
@@ -192,23 +247,18 @@ function initializeApp() {
     function addPage() {
         // Save current page
         pages[currentPage - 1] = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        userDrawings[currentPage - 1] = captureUserDrawings();
 
         // Add new page
         totalPages++;
         currentPage = totalPages;
         pages.push(null);
+        userDrawings.push(null);
         undoStacks.push([]);
 
         // Clear canvas for new page
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        clearCanvas();
         
-        // Redraw ruled lines if enabled
-        if (isA4Mode && showRuledLines) {
-            drawRuledLines();
-        }
-        
-        saveState(); // Save initial state for new page
-
         // Update UI
         updatePageSelect();
         updatePageControls();
@@ -221,6 +271,7 @@ function initializeApp() {
 
         // Save current page
         pages[currentPage - 1] = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        userDrawings[currentPage - 1] = captureUserDrawings();
 
         // Switch to selected page
         currentPage = pageNum;
@@ -237,6 +288,7 @@ function initializeApp() {
     function movePage(direction) {
         // Save current page
         pages[currentPage - 1] = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        userDrawings[currentPage - 1] = captureUserDrawings();
 
         let newPosition;
         if (direction === 'left' && currentPage > 1) {
@@ -249,14 +301,17 @@ function initializeApp() {
 
         // Get the page being moved
         const movingPage = pages[currentPage - 1];
+        const movingDrawings = userDrawings[currentPage - 1];
         const movingUndoStack = undoStacks[currentPage - 1];
 
         // Remove from current position
         pages.splice(currentPage - 1, 1);
+        userDrawings.splice(currentPage - 1, 1);
         undoStacks.splice(currentPage - 1, 1);
 
         // Insert at new position
         pages.splice(newPosition - 1, 0, movingPage);
+        userDrawings.splice(newPosition - 1, 0, movingDrawings);
         undoStacks.splice(newPosition - 1, 0, movingUndoStack);
 
         // Update current page reference
@@ -277,6 +332,7 @@ function initializeApp() {
 
         // Remove page
         pages.splice(currentPage - 1, 1);
+        userDrawings.splice(currentPage - 1, 1);
         undoStacks.splice(currentPage - 1, 1);
         totalPages--;
 
@@ -330,24 +386,30 @@ function initializeApp() {
         }, 2000);
     }
 
-    // Generate blog preview
+    // Generate blog preview using only the user drawings (no ruled lines)
     function generatePreview() {
-        // Save current page
+        // Save current page first
         pages[currentPage - 1] = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        userDrawings[currentPage - 1] = captureUserDrawings();
 
         let blogHTML = '';
 
         for (let i = 0; i < totalPages; i++) {
             const pageNum = i + 1;
-
-            // Create a temporary canvas to get the image
+            
+            // Create a temporary canvas for the clean version
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = canvas.width;
             tempCanvas.height = canvas.height;
             const tempCtx = tempCanvas.getContext('2d');
-
-            if (pages[i]) {
-                tempCtx.putImageData(pages[i], 0, 0);
+            
+            // Fill with white background
+            tempCtx.fillStyle = 'white';
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+            
+            // Draw just the user's drawings if available
+            if (userDrawings[i]) {
+                tempCtx.drawImage(userDrawings[i], 0, 0);
             }
 
             // Get image as data URL
@@ -361,13 +423,6 @@ function initializeApp() {
 
         // Update the preview
         blogPreview.innerHTML = blogHTML;
-    }
-
-    // Save blog draft
-    function saveDraft() {
-        generatePreview();
-        const title = blogTitle.value || 'Untitled Blog';
-        showToast(`Handwritten draft "${title}" saved! (Simulated)`);
     }
 
     // Publish blog
@@ -519,28 +574,9 @@ function initializeApp() {
         canvas.style.cursor = 'url(\'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><path d="M15 3h6v6"></path><path d="M10 14L21 3"></path></svg>\') 0 24, cell';
     });
 
-    // Add A4 paper event listeners
-    if (a4Toggle) {
-        a4Toggle.addEventListener('change', function() {
-            isA4Mode = this.checked;
-            resizeCanvas();
-            showToast(isA4Mode ? 'A4 paper mode enabled' : 'Free canvas mode enabled');
-        });
-    }
-
-    if (toggleLinesBtn) {
-        toggleLinesBtn.addEventListener('click', function() {
-            showRuledLines = !showRuledLines;
-            toggleLinesBtn.classList.toggle('active', showRuledLines);
-            redrawCanvas();
-            showToast(showRuledLines ? 'Ruled lines enabled' : 'Ruled lines disabled');
-        });
-    }
-
     clearBtn.addEventListener('click', clearCanvas);
     undoBtn.addEventListener('click', undo);
     addPageBtn.addEventListener('click', addPage);
-    saveBtn.addEventListener('click', saveDraft);
     publishBtn.addEventListener('click', publishBlog);
 
     pageSelect.addEventListener('change', function () {

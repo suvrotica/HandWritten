@@ -104,14 +104,19 @@ header {
     background-color: white;
     border: 1px solid #ddd;
     border-radius: 8px;
-    overflow: hidden;
+    overflow: auto; /* Allow scrolling for long A4 paper */
     position: relative;
-    height: 500px;
+    height: 600px; /* Increased from 500px to show more of the A4 paper */
+    
+    /* A4 paper settings - always enabled */
+    aspect-ratio: 1 / 1.414;  /* A4 aspect ratio */
+    width: 100%; /* Use full width */
+    padding-top: 10px;
 }
 
 #drawing-canvas {
     width: 100%;
-    height: 100%;
+    height: auto; /* Let height be determined by aspect ratio */
     touch-action: none;
     cursor: crosshair;
     background-color: #fafafa;
@@ -204,31 +209,4 @@ header {
     border-radius: 4px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     display: block;
-}
-
-.toolbar-group {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.paper-toggle {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    margin-left: 0.5rem;
-}
-
-.canvas-container.a4-mode {
-    aspect-ratio: 1 / 1.414;  /* A4 aspect ratio */
-    width: 100%; /* Use full width */
-    height: auto; /* Let height be determined by aspect ratio */
-    max-height: none; /* Remove height constraint */
-    margin: 0 auto;
-    overflow-y: auto; /* Allow scrolling if paper extends beyond view */
-}
-
-.canvas-container.a4-mode {
-    /* Existing styles... */
-    padding-top: 10px;
 }
