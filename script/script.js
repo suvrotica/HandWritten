@@ -201,25 +201,25 @@ function initializeApp() {
             return { x, y };
         }
 
-        // Get the center of the canvas
+        // Get the canvas rectangle
         const rect = canvas.getBoundingClientRect();
-        const centerX = rect.width / 2;
-        const centerY = rect.height / 2;
 
-        // Translate to origin (center of canvas)
-        const translatedX = x - centerX;
-        const translatedY = y - centerY;
+        // Calculate center relative to the canvas element itself, not its bounding rect
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
 
-        // Convert rotation from degrees to radians (apply reverse rotation to compensate)
-        // The rotation needs to be reversed here because we're transforming from the rotated
-        // coordinate system back to the original one
+        // Convert touch coordinates to be relative to the center of the canvas
+        const relativeX = x - (rect.width / 2);
+        const relativeY = y - (rect.height / 2);
+
+        // Convert rotation from degrees to radians
         const angleInRadians = currentRotation * Math.PI / 180;
 
-        // Rotate the point (apply reversed rotation)
-        const rotatedX = translatedX * Math.cos(angleInRadians) + translatedY * Math.sin(angleInRadians);
-        const rotatedY = -translatedX * Math.sin(angleInRadians) + translatedY * Math.cos(angleInRadians);
+        // Apply inverse rotation matrix
+        const rotatedX = relativeX * Math.cos(angleInRadians) + relativeY * Math.sin(angleInRadians);
+        const rotatedY = -relativeX * Math.sin(angleInRadians) + relativeY * Math.cos(angleInRadians);
 
-        // Translate back to canvas coordinates
+        // Return coordinates relative to canvas origin (0,0)
         return {
             x: rotatedX + centerX,
             y: rotatedY + centerY
