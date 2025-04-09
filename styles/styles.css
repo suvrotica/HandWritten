@@ -205,3 +205,23 @@ header {
     box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     display: block;
 }
+
+.toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.paper-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: 0.5rem;
+}
+
+.canvas-container.a4-mode {
+    aspect-ratio: 1 / 1.414;  /* A4 aspect ratio */
+    max-height: 80vh;
+    width: auto;
+    margin: 0 auto;
+}

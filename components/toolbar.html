@@ -1,0 +1,21 @@
+<div class="toolbar">
+    <button id="pencil-tool" class="active" title="Pencil">✏️ Pencil</button>
+    <button id="brush-tool" title="Brush">🖌️ Brush</button>
+    <button id="eraser-tool" title="Eraser">🧽 Eraser</button>
+    <div class="separator"></div>
+    <input type="range" id="stroke-width" class="stroke-width" min="1" max="20" value="3">
+    <span id="width-display">3px</span>
+    <div class="separator"></div>
+    <button id="clear-btn" title="Clear Page">🗑️ Clear</button>
+    <button id="undo-btn" title="Undo">↩️ Undo</button>
+    
+    <!-- Add this new toolbar group -->
+    <div class="separator"></div>
+    <div class="toolbar-group">
+        <div class="paper-toggle">
+            <input type="checkbox" id="a4-paper-toggle" checked>
+            <label for="a4-paper-toggle">A4 Paper</label>
+        </div>
+        <button id="toggle-lines-btn" title="Toggle ruled lines">📏 Lines</button>
+    </div>
+</div>

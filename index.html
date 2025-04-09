@@ -7,59 +7,23 @@
     <link rel="stylesheet" href="/styles/styles.css">
 </head>
 <body>
-    <header>
-        <div class="app-title">Handwriting Blog Editor</div>
-    </header>
+    <!-- Component placeholders that will be populated by JavaScript -->
+    <div id="header-container"></div>
 
     <div class="container">
         <input type="text" class="blog-title" placeholder="Enter your blog title...">
-
-        <div class="btn-row">
-            <button class="action-btn" id="add-page-btn">Add Page</button>
-            <button class="action-btn secondary" id="save-btn">Save Draft</button>
-            <button class="action-btn secondary" id="publish-btn">Publish</button>
-        </div>
-
-        <div class="toolbar">
-            <button id="pencil-tool" class="active" title="Pencil">✏️ Pencil</button>
-            <button id="brush-tool" title="Brush">🖌️ Brush</button>
-            <button id="eraser-tool" title="Eraser">🧽 Eraser</button>
-            <div class="separator"></div>
-            <input type="range" id="stroke-width" class="stroke-width" min="1" max="20" value="3">
-            <span id="width-display">3px</span>
-            <div class="separator"></div>
-            <button id="clear-btn" title="Clear Page">🗑️ Clear</button>
-            <button id="undo-btn" title="Undo">↩️ Undo</button>
-        </div>
-
-        <div class="canvas-container">
-            <canvas id="drawing-canvas"></canvas>
-        </div>
-
-        <div class="page-controls">
-            <div class="page-selector">
-                <span>Page:</span>
-                <select id="page-select"></select>
-                <button id="move-left-btn" class="page-management-btn" title="Move page left">◀ Move</button>
-                <button id="move-right-btn" class="page-management-btn" title="Move page right">Move ▶</button>
-                <button id="delete-btn" class="page-management-btn" title="Delete current page">Delete</button>
-            </div>
-            <div class="page-nav-buttons">
-                <button id="prev-btn" class="page-nav-btn">Previous</button>
-                <button id="next-btn" class="page-nav-btn">Next</button>
-            </div>
-        </div>
-
-        <div class="preview-container">
-            <h2>Blog Preview</h2>
-            <div class="blog-content" id="blog-preview">
-                <p>Your handwritten blog will be published as-is, preserving your natural writing style.</p>
-            </div>
-        </div>
+        
+        <div id="btn-row-container"></div>
+        <div id="toolbar-container"></div>
+        <div id="canvas-container"></div>
+        <div id="page-controls-container"></div>
+        <div id="preview-container"></div>
     </div>
 
     <div class="toast" id="toast">Changes saved!</div>
 
+    <!-- Load components first, then main script -->
+    <script src="/script/components.js"></script>
     <script src="/script/script.js"></script>
 </body>
 </html>

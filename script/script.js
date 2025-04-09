@@ -1,4 +1,10 @@
-document.addEventListener('DOMContentLoaded', function() {
+// Wait for all components to be loaded before initializing the app
+document.addEventListener('allComponentsLoaded', function () {
+    // Now initialize the app
+    initializeApp();
+});
+
+function initializeApp() {
     // DOM Elements
     const canvas = document.getElementById('drawing-canvas');
     const ctx = canvas.getContext('2d');
@@ -33,6 +39,17 @@ document.addEventListener('DOMContentLoaded', function() {
     let pages = [null]; // Store canvas image data for each page
     let undoStacks = [[]]; // Store undo history for each page
 
+    let isA4Mode = true;
+    let showRuledLines = true;
+    const A4_ASPECT_RATIO = 1 / 1.414; // Standard A4 ratio
+    const LINE_SPACING = 30; // Pixels between ruled lines
+    const MARGIN_LEFT = 60; // Left margin in pixels
+    const MARGIN_RIGHT = 40; // Right margin in pixels
+    const MARGIN_TOP = 40; // Top margin in pixels
+    const MARGIN_BOTTOM = 40; // Bottom margin in pixels
+    const LINE_COLOR = 'rgba(173, 216, 230, 0.5)'; // Light blue with opacity
+    const MARGIN_LINE_COLOR = 'rgba(255, 0, 0, 0.2)'; // Light red for margin indicator
+
     // Initialize
     function init() {
         resizeCanvas();
@@ -61,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function saveState() {
         const currentState = ctx.getImageData(0, 0, canvas.width, canvas.height);
         undoStacks[currentPage - 1].push(currentState);
-        
+
         // Limit stack size
         if (undoStacks[currentPage - 1].length > 10) {
             undoStacks[currentPage - 1].shift();
@@ -76,10 +93,10 @@ document.addEventListener('DOMContentLoaded', function() {
             undoStacks[currentPage - 1] = [];
             return;
         }
-        
+
         // Remove current state
         undoStacks[currentPage - 1].pop();
-        
+
         // Restore previous state
         if (undoStacks[currentPage - 1].length > 0) {
             const prevState = undoStacks[currentPage - 1][undoStacks[currentPage - 1].length - 1];
@@ -100,17 +117,17 @@ document.addEventListener('DOMContentLoaded', function() {
     function addPage() {
         // Save current page
         pages[currentPage - 1] = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        
+
         // Add new page
         totalPages++;
         currentPage = totalPages;
         pages.push(null);
         undoStacks.push([]);
-        
+
         // Clear canvas for new page
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         saveState(); // Save initial state for new page
-        
+
         // Update UI
         updatePageSelect();
         updatePageControls();
@@ -120,16 +137,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Switch to page
     function switchPage(pageNum) {
         if (pageNum < 1 || pageNum > totalPages) return;
-        
+
         // Save current page
         pages[currentPage - 1] = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        
+
         // Switch to selected page
         currentPage = pageNum;
-        
+
         // Redraw canvas
         redrawCanvas();
-        
+
         // Update UI
         updatePageSelect();
         updatePageControls();
@@ -139,7 +156,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function movePage(direction) {
         // Save current page
         pages[currentPage - 1] = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        
+
         let newPosition;
         if (direction === 'left' && currentPage > 1) {
             newPosition = currentPage - 1;
@@ -148,22 +165,22 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             return; // Invalid move
         }
-        
+
         // Get the page being moved
         const movingPage = pages[currentPage - 1];
         const movingUndoStack = undoStacks[currentPage - 1];
-        
+
         // Remove from current position
         pages.splice(currentPage - 1, 1);
         undoStacks.splice(currentPage - 1, 1);
-        
+
         // Insert at new position
         pages.splice(newPosition - 1, 0, movingPage);
         undoStacks.splice(newPosition - 1, 0, movingUndoStack);
-        
+
         // Update current page reference
         currentPage = newPosition;
-        
+
         // Update UI
         updatePageSelect();
         updatePageControls();
@@ -176,20 +193,20 @@ document.addEventListener('DOMContentLoaded', function() {
             showToast('Cannot delete the only page');
             return;
         }
-        
+
         // Remove page
         pages.splice(currentPage - 1, 1);
         undoStacks.splice(currentPage - 1, 1);
         totalPages--;
-        
+
         // Adjust current page if needed
         if (currentPage > totalPages) {
             currentPage = totalPages;
         }
-        
+
         // Redraw canvas
         redrawCanvas();
-        
+
         // Update UI
         updatePageSelect();
         updatePageControls();
@@ -199,16 +216,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Update page dropdown
     function updatePageSelect() {
         pageSelect.innerHTML = '';
-        
+
         for (let i = 0; i < totalPages; i++) {
             const option = document.createElement('option');
             option.value = i + 1;
             option.textContent = `Page ${i + 1}`;
-            
+
             if (i + 1 === currentPage) {
                 option.selected = true;
             }
-            
+
             pageSelect.appendChild(option);
         }
     }
@@ -226,7 +243,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function showToast(message) {
         toast.textContent = message;
         toast.style.display = 'block';
-        
+
         setTimeout(() => {
             toast.style.display = 'none';
         }, 2000);
@@ -236,31 +253,31 @@ document.addEventListener('DOMContentLoaded', function() {
     function generatePreview() {
         // Save current page
         pages[currentPage - 1] = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        
+
         let blogHTML = '';
-        
+
         for (let i = 0; i < totalPages; i++) {
             const pageNum = i + 1;
-            
+
             // Create a temporary canvas to get the image
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = canvas.width;
             tempCanvas.height = canvas.height;
             const tempCtx = tempCanvas.getContext('2d');
-            
+
             if (pages[i]) {
                 tempCtx.putImageData(pages[i], 0, 0);
             }
-            
+
             // Get image as data URL
             const imageUrl = tempCanvas.toDataURL('image/png');
-            
+
             // Add image to the preview
             blogHTML += `
                 <img src="${imageUrl}" alt="Handwritten content page ${pageNum}">
             `;
         }
-        
+
         // Update the preview
         blogPreview.innerHTML = blogHTML;
     }
@@ -285,7 +302,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const pos = getPointerPosition(e);
         lastX = pos.x;
         lastY = pos.y;
-        
+
         // Save state for undo
         if (undoStacks[currentPage - 1].length === 0) {
             saveState();
@@ -296,36 +313,36 @@ document.addEventListener('DOMContentLoaded', function() {
     function draw(e) {
         if (!isDrawing) return;
         e.preventDefault();
-        
+
         const pos = getPointerPosition(e);
         const x = pos.x;
         const y = pos.y;
-        
+
         ctx.lineJoin = 'round';
         ctx.lineCap = 'round';
-        
+
         // Drawing based on tool
         if (currentTool === 'pencil') {
             // Pencil with texture
             for (let i = 0; i < 3; i++) {
                 ctx.beginPath();
                 ctx.moveTo(
-                    lastX + (Math.random() * 2 - 1) * 0.5, 
+                    lastX + (Math.random() * 2 - 1) * 0.5,
                     lastY + (Math.random() * 2 - 1) * 0.5
                 );
                 ctx.lineTo(
-                    x + (Math.random() * 2 - 1) * 0.5, 
+                    x + (Math.random() * 2 - 1) * 0.5,
                     y + (Math.random() * 2 - 1) * 0.5
                 );
-                
+
                 // Get pressure if available
                 let pressure = e.pressure !== undefined ? e.pressure : 0.7;
                 if (pressure === 0) pressure = 0.3; // Minimum pressure
-                
+
                 // Adjust width and opacity based on pressure
                 const width = currentWidth * pressure;
                 const opacity = Math.min(0.3 + pressure * 0.5, 0.9);
-                
+
                 ctx.strokeStyle = `rgba(51, 51, 51, ${opacity})`;
                 ctx.lineWidth = width * (0.8 + Math.random() * 0.2);
                 ctx.stroke();
@@ -334,16 +351,16 @@ document.addEventListener('DOMContentLoaded', function() {
             // Brush with pressure sensitivity
             let pressure = e.pressure !== undefined ? e.pressure : 0.7;
             if (pressure === 0) pressure = 0.3; // Minimum pressure
-            
+
             // Wider, softer stroke for brush
             ctx.beginPath();
             ctx.moveTo(lastX, lastY);
             ctx.lineTo(x, y);
-            
+
             ctx.lineWidth = currentWidth * 1.5 * pressure;
             ctx.strokeStyle = `rgba(51, 51, 51, ${0.2 + pressure * 0.3})`;
             ctx.stroke();
-            
+
             // Darker center
             ctx.beginPath();
             ctx.moveTo(lastX, lastY);
@@ -361,7 +378,7 @@ document.addEventListener('DOMContentLoaded', function() {
             ctx.stroke();
             ctx.globalCompositeOperation = 'source-over';
         }
-        
+
         lastX = x;
         lastY = y;
     }
@@ -378,7 +395,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function getPointerPosition(e) {
         const rect = canvas.getBoundingClientRect();
         let x, y;
-        
+
         if (e.type.includes('touch')) {
             const touch = e.touches[0] || e.changedTouches[0];
             x = touch.clientX - rect.left;
@@ -387,17 +404,17 @@ document.addEventListener('DOMContentLoaded', function() {
             x = e.clientX - rect.left;
             y = e.clientY - rect.top;
         }
-        
+
         return { x, y };
     }
 
     // Event Listeners
-    strokeWidthInput.addEventListener('input', function() {
+    strokeWidthInput.addEventListener('input', function () {
         currentWidth = this.value;
         widthDisplay.textContent = `${this.value}px`;
     });
 
-    pencilTool.addEventListener('click', function() {
+    pencilTool.addEventListener('click', function () {
         currentTool = 'pencil';
         pencilTool.classList.add('active');
         brushTool.classList.remove('active');
@@ -405,7 +422,7 @@ document.addEventListener('DOMContentLoaded', function() {
         canvas.style.cursor = 'url(\'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="2" x2="22" y2="6"></line><path d="M7.5 20.5L19 9l-4-4L3.5 16.5 2 22z"></path></svg>\') 0 24, crosshair';
     });
 
-    brushTool.addEventListener('click', function() {
+    brushTool.addEventListener('click', function () {
         currentTool = 'brush';
         brushTool.classList.add('active');
         pencilTool.classList.remove('active');
@@ -413,7 +430,7 @@ document.addEventListener('DOMContentLoaded', function() {
         canvas.style.cursor = 'url(\'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 9.5V5h-4.5"></path><path d="M5 19.5l-.5-.5L19 4.5l.5.5L5 19.5z"></path><path d="M5 15v4h4"></path></svg>\') 0 24, crosshair';
     });
 
-    eraserTool.addEventListener('click', function() {
+    eraserTool.addEventListener('click', function () {
         currentTool = 'eraser';
         eraserTool.classList.add('active');
         pencilTool.classList.remove('active');
@@ -426,33 +443,33 @@ document.addEventListener('DOMContentLoaded', function() {
     addPageBtn.addEventListener('click', addPage);
     saveBtn.addEventListener('click', saveDraft);
     publishBtn.addEventListener('click', publishBlog);
-    
-    pageSelect.addEventListener('change', function() {
+
+    pageSelect.addEventListener('change', function () {
         switchPage(parseInt(this.value));
     });
-    
-    prevBtn.addEventListener('click', function() {
+
+    prevBtn.addEventListener('click', function () {
         if (currentPage > 1) {
             switchPage(currentPage - 1);
         }
     });
-    
-    nextBtn.addEventListener('click', function() {
+
+    nextBtn.addEventListener('click', function () {
         if (currentPage < totalPages) {
             switchPage(currentPage + 1);
         } else {
             addPage();
         }
     });
-    
-    moveLeftBtn.addEventListener('click', function() {
+
+    moveLeftBtn.addEventListener('click', function () {
         movePage('left');
     });
-    
-    moveRightBtn.addEventListener('click', function() {
+
+    moveRightBtn.addEventListener('click', function () {
         movePage('right');
     });
-    
+
     deleteBtn.addEventListener('click', deletePage);
 
     // Setup pointer events for drawing
@@ -465,4 +482,4 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize
     init();
     saveState(); // Save initial state
-});
+}
