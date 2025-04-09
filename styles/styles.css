@@ -221,7 +221,14 @@ header {
 
 .canvas-container.a4-mode {
     aspect-ratio: 1 / 1.414;  /* A4 aspect ratio */
-    max-height: 80vh;
-    width: auto;
+    width: 100%; /* Use full width */
+    height: auto; /* Let height be determined by aspect ratio */
+    max-height: none; /* Remove height constraint */
     margin: 0 auto;
+    overflow-y: auto; /* Allow scrolling if paper extends beyond view */
+}
+
+.canvas-container.a4-mode {
+    /* Existing styles... */
+    padding-top: 10px;
 }

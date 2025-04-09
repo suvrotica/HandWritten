@@ -28,6 +28,11 @@ function initializeApp() {
     const blogTitle = document.querySelector('.blog-title');
     const toast = document.getElementById('toast');
 
+    // A4 Paper Elements
+    const a4Toggle = document.getElementById('a4-paper-toggle');
+    const toggleLinesBtn = document.getElementById('toggle-lines-btn');
+    const canvasContainer = document.querySelector('.canvas-container');
+
     // Variables
     let isDrawing = false;
     let lastX = 0;
@@ -39,6 +44,7 @@ function initializeApp() {
     let pages = [null]; // Store canvas image data for each page
     let undoStacks = [[]]; // Store undo history for each page
 
+    // A4 Paper Variables
     let isA4Mode = true;
     let showRuledLines = true;
     const A4_ASPECT_RATIO = 1 / 1.414; // Standard A4 ratio
@@ -52,26 +58,89 @@ function initializeApp() {
 
     // Initialize
     function init() {
+        // Set toggleLinesBtn to active initially
+        if (toggleLinesBtn) {
+            toggleLinesBtn.classList.add('active');
+        }
+        
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
         updatePageSelect();
         updatePageControls();
     }
 
-    // Set canvas size
     function resizeCanvas() {
         const container = canvas.parentElement;
-        canvas.width = container.clientWidth;
-        canvas.height = container.clientHeight;
+        
+        if (isA4Mode) {
+            canvasContainer.classList.add('a4-mode');
+            // Always prioritize using full width for A4
+            canvas.width = container.clientWidth;
+            // Calculate height based on A4 aspect ratio
+            canvas.height = canvas.width * 1.414;
+            
+            // Scroll to top to ensure paper top is visible
+            container.scrollTop = 0;
+        } else {
+            canvasContainer.classList.remove('a4-mode');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        
         redrawCanvas();
     }
 
-    // Redraw canvas with current page content
+    // Redraw canvas with current page content and ruled lines if enabled
     function redrawCanvas() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw ruled lines if enabled
+        if (isA4Mode && showRuledLines) {
+            drawRuledLines();
+        }
+        
+        // Draw page content
         if (pages[currentPage - 1]) {
             ctx.putImageData(pages[currentPage - 1], 0, 0);
         }
+    }
+
+    // Draw ruled lines and margins
+    function drawRuledLines() {
+        // Fill with very light background color to simulate paper
+        ctx.fillStyle = 'rgba(252, 252, 250, 1)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw horizontal ruled lines
+        ctx.beginPath();
+        ctx.strokeStyle = LINE_COLOR;
+        ctx.lineWidth = 1;
+        
+        // Start from the top margin and draw lines with even spacing
+        for (let y = MARGIN_TOP; y < canvas.height - MARGIN_BOTTOM; y += LINE_SPACING) {
+            ctx.moveTo(MARGIN_LEFT, y);
+            ctx.lineTo(canvas.width - MARGIN_RIGHT, y);
+        }
+        ctx.stroke();
+        
+        // Draw margin line
+        ctx.beginPath();
+        ctx.strokeStyle = MARGIN_LINE_COLOR;
+        ctx.lineWidth = 1;
+        
+        // Left margin vertical line
+        ctx.moveTo(MARGIN_LEFT, MARGIN_TOP);
+        ctx.lineTo(MARGIN_LEFT, canvas.height - MARGIN_BOTTOM);
+        
+        // Top margin horizontal line
+        ctx.moveTo(MARGIN_LEFT, MARGIN_TOP);
+        ctx.lineTo(canvas.width - MARGIN_RIGHT, MARGIN_TOP);
+        
+        // Bottom margin horizontal line
+        ctx.moveTo(MARGIN_LEFT, canvas.height - MARGIN_BOTTOM);
+        ctx.lineTo(canvas.width - MARGIN_RIGHT, canvas.height - MARGIN_BOTTOM);
+        
+        ctx.stroke();
     }
 
     // Save current canvas state to undo stack
@@ -109,6 +178,12 @@ function initializeApp() {
     // Clear canvas
     function clearCanvas() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Redraw ruled lines if enabled
+        if (isA4Mode && showRuledLines) {
+            drawRuledLines();
+        }
+        
         undoStacks[currentPage - 1] = [];
         saveState(); // Save the clear state
     }
@@ -126,6 +201,12 @@ function initializeApp() {
 
         // Clear canvas for new page
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Redraw ruled lines if enabled
+        if (isA4Mode && showRuledLines) {
+            drawRuledLines();
+        }
+        
         saveState(); // Save initial state for new page
 
         // Update UI
@@ -437,6 +518,24 @@ function initializeApp() {
         brushTool.classList.remove('active');
         canvas.style.cursor = 'url(\'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><path d="M15 3h6v6"></path><path d="M10 14L21 3"></path></svg>\') 0 24, cell';
     });
+
+    // Add A4 paper event listeners
+    if (a4Toggle) {
+        a4Toggle.addEventListener('change', function() {
+            isA4Mode = this.checked;
+            resizeCanvas();
+            showToast(isA4Mode ? 'A4 paper mode enabled' : 'Free canvas mode enabled');
+        });
+    }
+
+    if (toggleLinesBtn) {
+        toggleLinesBtn.addEventListener('click', function() {
+            showRuledLines = !showRuledLines;
+            toggleLinesBtn.classList.toggle('active', showRuledLines);
+            redrawCanvas();
+            showToast(showRuledLines ? 'Ruled lines enabled' : 'Ruled lines disabled');
+        });
+    }
 
     clearBtn.addEventListener('click', clearCanvas);
     undoBtn.addEventListener('click', undo);

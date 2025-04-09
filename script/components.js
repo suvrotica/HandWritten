@@ -12,11 +12,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load each component
     let loadedCount = 0;
+    
     components.forEach(component => {
         loadComponent(component.id, component.file, function() {
             loadedCount++;
+            console.log(`Loaded component ${component.id}, ${loadedCount}/${components.length}`);
+            
             if (loadedCount === components.length) {
                 // All components are loaded, trigger the init event
+                console.log("All components loaded, dispatching event");
                 document.dispatchEvent(new CustomEvent('allComponentsLoaded'));
             }
         });
@@ -27,10 +31,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const container = document.getElementById(containerId);
         if (!container) {
             console.error(`Container with ID "${containerId}" not found`);
+            if (typeof callback === 'function') {
+                callback();
+            }
             return;
         }
 
-        fetch(filePath)
+        console.log(`Fetching ${filePath}...`);
+        
+        // For local development without a server, use a relative path
+        // Remove the leading slash for relative paths
+        const adjustedPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+        
+        fetch(adjustedPath)
             .then(response => {
                 if (!response.ok) {
                     throw new Error(`Failed to load ${filePath}: ${response.status} ${response.statusText}`);
@@ -38,6 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return response.text();
             })
             .then(html => {
+                console.log(`Successfully loaded ${filePath}`);
                 container.innerHTML = html;
                 if (typeof callback === 'function') {
                     callback();
