@@ -64,27 +64,27 @@ function initializeApp() {
     function init() {
         // Always use A4 mode
         canvasContainer.classList.add('a4-mode');
-        
+
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
         updatePageSelect();
         updatePageControls();
-        
+
         // Initialize rotation gesture handlers
         initRotationHandlers();
     }
-    
+
     // Initialize rotation gesture handlers
     function initRotationHandlers() {
         canvasWrapper.addEventListener('touchstart', handleTouchStart, { passive: false });
         canvasWrapper.addEventListener('touchmove', handleTouchMove, { passive: false });
         canvasWrapper.addEventListener('touchend', handleTouchEnd, { passive: false });
         canvasWrapper.addEventListener('touchcancel', handleTouchEnd, { passive: false });
-        
+
         // Reset rotation button
         resetRotationBtn.addEventListener('click', resetRotation);
     }
-    
+
     // Reset rotation to 0 degrees
     function resetRotation() {
         currentRotation = 0;
@@ -92,40 +92,40 @@ function initializeApp() {
         applyRotation();
         showToast('Rotation reset');
     }
-    
+
     // Handle touch start for rotation detection
     function handleTouchStart(e) {
         // Only detect rotation when 2 or more fingers
         if (e.touches.length >= 2) {
             e.preventDefault(); // Prevent default browser behavior
-            
+
             // We're starting a rotation gesture
             isRotating = true;
-            
+
             // Record the IDs of the active touches
             activeTouchIds = [];
             for (let i = 0; i < e.touches.length; i++) {
                 activeTouchIds.push(e.touches[i].identifier);
             }
-            
+
             // Calculate initial positions
             const touch1 = e.touches[0];
             const touch2 = e.touches[1];
-            
+
             // Store the initial angle between the two touch points
             const dx = touch2.clientX - touch1.clientX;
             const dy = touch2.clientY - touch1.clientY;
             startAngle = Math.atan2(dy, dx) * 180 / Math.PI;
-            
+
             // Show rotation indicator
             rotationIndicator.textContent = `${Math.round(currentRotation)}°`;
             rotationIndicator.classList.add('visible');
-            
+
             // Disable drawing while rotating
             isDrawing = false;
         }
     }
-    
+
     // Handle touch move for rotation
     function handleTouchMove(e) {
         if (isRotating && e.touches.length >= 2) {
@@ -134,7 +134,7 @@ function initializeApp() {
             // Find the two touch points we're tracking
             let touch1, touch2;
             let foundTouches = 0;
-            
+
             // Look for our tracked touch points using their IDs
             for (let i = 0; i < e.touches.length; i++) {
                 if (activeTouchIds.includes(e.touches[i].identifier)) {
@@ -144,42 +144,42 @@ function initializeApp() {
                     if (foundTouches >= 2) break;
                 }
             }
-            
+
             // If we found our two tracked points
             if (foundTouches >= 2) {
                 // Calculate current angle
                 const dx = touch2.clientX - touch1.clientX;
                 const dy = touch2.clientY - touch1.clientY;
                 const currentAngle = Math.atan2(dy, dx) * 180 / Math.PI;
-                
+
                 // Calculate rotation change
                 let angleDiff = currentAngle - startAngle;
-                
+
                 // Update current rotation (with some smoothing)
                 currentRotation = (currentRotation + angleDiff) % 360;
-                
+
                 // Save rotation for this page
                 pageRotations[currentPage - 1] = currentRotation;
-                
+
                 // Reset start angle for incremental rotation
                 startAngle = currentAngle;
-                
+
                 // Apply the rotation
                 applyRotation();
-                
+
                 // Update rotation indicator
                 rotationIndicator.textContent = `${Math.round(currentRotation)}°`;
             }
         }
     }
-    
+
     // Handle touch end for rotation
     function handleTouchEnd(e) {
         if (isRotating) {
             // Check if we still have 2 or more touches
             if (e.touches.length < 2) {
                 isRotating = false;
-                
+
                 // Hide rotation indicator after a delay
                 setTimeout(() => {
                     rotationIndicator.classList.remove('visible');
@@ -187,35 +187,38 @@ function initializeApp() {
             }
         }
     }
-    
+
     // Apply current rotation to the canvas wrapper
     function applyRotation() {
         canvasWrapper.style.transform = `rotate(${currentRotation}deg)`;
     }
-    
+
+    // Adjust mouse/touch coordinates based on rotation
     // Adjust mouse/touch coordinates based on rotation
     function adjustCoordsForRotation(x, y) {
         // If there's no rotation, return coordinates as is
         if (currentRotation === 0) {
             return { x, y };
         }
-        
+
         // Get the center of the canvas
         const rect = canvas.getBoundingClientRect();
         const centerX = rect.width / 2;
         const centerY = rect.height / 2;
-        
+
         // Translate to origin (center of canvas)
         const translatedX = x - centerX;
         const translatedY = y - centerY;
-        
-        // Convert rotation from degrees to radians
-        const angleInRadians = -currentRotation * Math.PI / 180;
-        
-        // Rotate the point (counter-rotate to account for canvas rotation)
-        const rotatedX = translatedX * Math.cos(angleInRadians) - translatedY * Math.sin(angleInRadians);
-        const rotatedY = translatedX * Math.sin(angleInRadians) + translatedY * Math.cos(angleInRadians);
-        
+
+        // Convert rotation from degrees to radians (apply reverse rotation to compensate)
+        // The rotation needs to be reversed here because we're transforming from the rotated
+        // coordinate system back to the original one
+        const angleInRadians = currentRotation * Math.PI / 180;
+
+        // Rotate the point (apply reversed rotation)
+        const rotatedX = translatedX * Math.cos(angleInRadians) + translatedY * Math.sin(angleInRadians);
+        const rotatedY = -translatedX * Math.sin(angleInRadians) + translatedY * Math.cos(angleInRadians);
+
         // Translate back to canvas coordinates
         return {
             x: rotatedX + centerX,
@@ -226,31 +229,31 @@ function initializeApp() {
     // Set canvas size based on A4 dimensions
     function resizeCanvas() {
         const container = canvas.parentElement.parentElement;
-        
+
         // Always prioritize using full width for A4
         canvas.width = container.clientWidth;
         // Calculate height based on A4 aspect ratio (1:1.414)
         canvas.height = canvas.width * 1.414;
-        
+
         // Scroll to top to ensure paper top is visible
         container.scrollTop = 0;
-        
+
         redrawCanvas();
     }
 
     // Redraw canvas with current page content and ruled lines
     function redrawCanvas() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
+
         // Always draw ruled lines first
         drawRuledLines();
-        
+
         // Draw page content
         if (userDrawings[currentPage - 1]) {
             // Draw just the user's drawings on top of ruled lines
             ctx.drawImage(userDrawings[currentPage - 1], 0, 0);
         }
-        
+
         // Apply the saved rotation for this page
         currentRotation = pageRotations[currentPage - 1] || 0;
         applyRotation();
@@ -261,36 +264,36 @@ function initializeApp() {
         // Fill with very light background color to simulate paper
         ctx.fillStyle = 'rgba(252, 252, 250, 1)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
+
         // Draw horizontal ruled lines
         ctx.beginPath();
         ctx.strokeStyle = LINE_COLOR;
         ctx.lineWidth = 1;
-        
+
         // Start from the top margin and draw lines with even spacing
         for (let y = MARGIN_TOP; y < canvas.height - MARGIN_BOTTOM; y += LINE_SPACING) {
             ctx.moveTo(MARGIN_LEFT, y);
             ctx.lineTo(canvas.width - MARGIN_RIGHT, y);
         }
         ctx.stroke();
-        
+
         // Draw margin line
         ctx.beginPath();
         ctx.strokeStyle = MARGIN_LINE_COLOR;
         ctx.lineWidth = 1;
-        
+
         // Left margin vertical line
         ctx.moveTo(MARGIN_LEFT, MARGIN_TOP);
         ctx.lineTo(MARGIN_LEFT, canvas.height - MARGIN_BOTTOM);
-        
+
         // Top margin horizontal line
         ctx.moveTo(MARGIN_LEFT, MARGIN_TOP);
         ctx.lineTo(canvas.width - MARGIN_RIGHT, MARGIN_TOP);
-        
+
         // Bottom margin horizontal line
         ctx.moveTo(MARGIN_LEFT, canvas.height - MARGIN_BOTTOM);
         ctx.lineTo(canvas.width - MARGIN_RIGHT, canvas.height - MARGIN_BOTTOM);
-        
+
         ctx.stroke();
     }
 
@@ -300,61 +303,61 @@ function initializeApp() {
         if (!pages[currentPage - 1]) {
             return null;
         }
-        
+
         // Create an off-screen canvas to process the content
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = canvas.width;
         tempCanvas.height = canvas.height;
         const tempCtx = tempCanvas.getContext('2d');
-        
+
         // First, get the full canvas with background and lines
         tempCtx.drawImage(canvas, 0, 0);
-        
+
         // Now recreate a clean version with just the drawings
         const cleanCanvas = document.createElement('canvas');
         cleanCanvas.width = canvas.width;
         cleanCanvas.height = canvas.height;
         const cleanCtx = cleanCanvas.getContext('2d');
-        
+
         // Fill with plain white background
         cleanCtx.fillStyle = 'white';
         cleanCtx.fillRect(0, 0, cleanCanvas.width, cleanCanvas.height);
-        
+
         // Get pixel data to process
         const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
         const data = imageData.data;
-        
+
         // Create a new image data object for the clean version
         const cleanImageData = cleanCtx.createImageData(cleanCanvas.width, cleanCanvas.height);
         const cleanData = cleanImageData.data;
-        
+
         // Color ranges for the ruled lines and background
         const isBackgroundOrLine = (r, g, b) => {
             // Check if it's the white/off-white background
             const isWhitish = r > 250 && g > 250 && b > 248;
-            
+
             // Check if it's a blue ruled line (approximate)
             const isRuledLine = r > 165 && r < 180 && g > 210 && g < 225 && b > 225 && b < 240;
-            
+
             // Check if it's a red margin line (approximate)
             const isMarginLine = r > 250 && g < 10 && b < 10;
-            
+
             return isWhitish || isRuledLine || isMarginLine;
         };
-        
+
         // Copy non-background, non-line pixels to the clean image
         for (let i = 0; i < data.length; i += 4) {
-            if (!isBackgroundOrLine(data[i], data[i+1], data[i+2]) && data[i+3] > 0) {
+            if (!isBackgroundOrLine(data[i], data[i + 1], data[i + 2]) && data[i + 3] > 0) {
                 cleanData[i] = data[i];       // R
-                cleanData[i+1] = data[i+1];   // G
-                cleanData[i+2] = data[i+2];   // B
-                cleanData[i+3] = data[i+3];   // A
+                cleanData[i + 1] = data[i + 1];   // G
+                cleanData[i + 2] = data[i + 2];   // B
+                cleanData[i + 3] = data[i + 3];   // A
             }
         }
-        
+
         // Put the processed image data onto the clean canvas
         cleanCtx.putImageData(cleanImageData, 0, 0);
-        
+
         return cleanCanvas;
     }
 
@@ -367,13 +370,13 @@ function initializeApp() {
         if (undoStacks[currentPage - 1].length > 10) {
             undoStacks[currentPage - 1].shift();
         }
-        
+
         // Save the full canvas with background and lines
         pages[currentPage - 1] = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        
+
         // Save just the user's drawings
         userDrawings[currentPage - 1] = captureUserDrawings();
-        
+
         // Save the rotation angle
         pageRotations[currentPage - 1] = currentRotation;
     }
@@ -393,7 +396,7 @@ function initializeApp() {
         if (undoStacks[currentPage - 1].length > 0) {
             const prevState = undoStacks[currentPage - 1][undoStacks[currentPage - 1].length - 1];
             ctx.putImageData(prevState, 0, 0);
-            
+
             // Update user drawings
             userDrawings[currentPage - 1] = captureUserDrawings();
         } else {
@@ -404,10 +407,10 @@ function initializeApp() {
     // Clear canvas
     function clearCanvas() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
+
         // Always redraw the ruled lines
         drawRuledLines();
-        
+
         undoStacks[currentPage - 1] = [];
         userDrawings[currentPage - 1] = null;
         saveState(); // Save the clear state
@@ -434,7 +437,7 @@ function initializeApp() {
 
         // Clear canvas for new page
         clearCanvas();
-        
+
         // Update UI
         updatePageSelect();
         updatePageControls();
@@ -452,7 +455,7 @@ function initializeApp() {
 
         // Switch to selected page
         currentPage = pageNum;
-        
+
         // Set rotation for the selected page
         currentRotation = pageRotations[currentPage - 1] || 0;
         applyRotation();
@@ -526,7 +529,7 @@ function initializeApp() {
         if (currentPage > totalPages) {
             currentPage = totalPages;
         }
-        
+
         // Set rotation for the current page
         currentRotation = pageRotations[currentPage - 1] || 0;
         applyRotation();
@@ -587,17 +590,17 @@ function initializeApp() {
 
         for (let i = 0; i < totalPages; i++) {
             const pageNum = i + 1;
-            
+
             // Create a temporary canvas for the clean version
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = canvas.width;
             tempCanvas.height = canvas.height;
             const tempCtx = tempCanvas.getContext('2d');
-            
+
             // Fill with white background
             tempCtx.fillStyle = 'white';
             tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-            
+
             // Draw just the user's drawings if available
             if (userDrawings[i]) {
                 tempCtx.drawImage(userDrawings[i], 0, 0);
@@ -629,7 +632,7 @@ function initializeApp() {
         if (isRotating || (e.touches && e.touches.length >= 2)) {
             return;
         }
-        
+
         isDrawing = true;
         const pos = getPointerPosition(e);
         lastX = pos.x;
@@ -736,7 +739,7 @@ function initializeApp() {
             x = e.clientX - rect.left;
             y = e.clientY - rect.top;
         }
-        
+
         // Adjust coordinates for rotation
         if (currentRotation !== 0) {
             const adjusted = adjustCoordsForRotation(x, y);
@@ -821,3 +824,4 @@ function initializeApp() {
     init();
     saveState(); // Save initial state
 }
+
