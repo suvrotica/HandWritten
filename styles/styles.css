@@ -104,14 +104,60 @@ header {
     background-color: white;
     border: 1px solid #ddd;
     border-radius: 8px;
-    overflow: auto; /* Allow scrolling for long A4 paper */
+    overflow: hidden; /* Changed from auto to hidden for rotation */
     position: relative;
     height: 600px; /* Increased from 500px to show more of the A4 paper */
-    
-    /* A4 paper settings - always enabled */
-    aspect-ratio: 1 / 1.414;  /* A4 aspect ratio */
-    width: 100%; /* Use full width */
-    padding-top: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Canvas wrapper for rotation */
+.canvas-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transform-origin: center center;
+    transition: transform 0.1s ease-out;
+}
+
+.rotation-indicator {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 12px;
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.rotation-indicator.visible {
+    opacity: 1;
+}
+
+/* Reset button for rotation */
+.reset-rotation-btn {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border: 1px solid #ddd;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 16px;
+    z-index: 100;
 }
 
 #drawing-canvas {
