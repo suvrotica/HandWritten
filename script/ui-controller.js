@@ -68,9 +68,35 @@ function initUIController(appState, canvasHandler, rotationHandler, pageManager,
         
         deleteBtn.addEventListener('click', pageManager.deletePage.bind(pageManager));
         
-        // Export actions
-        saveSvgBtn.addEventListener('click', exportManager.saveCombinedSvg.bind(exportManager));
-        publishBtn.addEventListener('click', exportManager.publishBlog.bind(exportManager));
+        // Export actions - IMPORTANT FIXES
+        saveSvgBtn.addEventListener('click', function() {
+            // First explicitly save the current drawing state
+            const currentPageIndex = appState.pages.currentPage - 1;
+            appState.pages.userDrawings[currentPageIndex] = canvasHandler.captureUserDrawings();
+            
+            // Then generate the SVG
+            exportManager.saveCombinedSvg();
+            
+            // Ensure lines are redrawn in the editor
+            setTimeout(() => {
+                canvasHandler.redrawCanvas();
+            }, 100);
+        });
+        
+        publishBtn.addEventListener('click', function() {
+            // First explicitly save the current drawing state
+            const currentPageIndex = appState.pages.currentPage - 1;
+            appState.pages.userDrawings[currentPageIndex] = canvasHandler.captureUserDrawings();
+            
+            // Then generate preview and publish
+            exportManager.generatePreview();
+            exportManager.publishBlog();
+            
+            // Ensure lines are redrawn in the editor
+            setTimeout(() => {
+                canvasHandler.redrawCanvas();
+            }, 100);
+        });
         
         // Setup canvas drawing events
         canvas.style.touchAction = 'none';

@@ -50,7 +50,7 @@ function initPageManager(appState, canvasHandler) {
             rotation.currentRotation = rotation.pageRotations[pages.currentPage - 1] || 0;
             canvasHandler.applyRotation();
             
-            // Redraw canvas - this should include ruled lines thanks to our redrawCanvas fix
+            // Redraw canvas - critically important to draw with ruled lines
             canvasHandler.redrawCanvas();
             
             // Update UI
@@ -168,7 +168,7 @@ function initPageManager(appState, canvasHandler) {
                 return null;
             }
             
-            // Create a temporary canvas for the clean version
+            // Create a temporary canvas for the preview
             const tempCanvas = document.createElement('canvas');
             tempCanvas.width = canvas.width;
             tempCanvas.height = canvas.height;

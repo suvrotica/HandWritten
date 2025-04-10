@@ -96,51 +96,49 @@ function initCanvasHandler(appState) {
             tempCanvas.height = canvas.height;
             const tempCtx = tempCanvas.getContext('2d');
             
-            // First, get the full canvas with background and lines
+            // Draw the current canvas content to the temp canvas
             tempCtx.drawImage(canvas, 0, 0);
             
-            // Now recreate a clean version with just the drawings
+            // Create a new canvas for the clean user drawings
             const cleanCanvas = document.createElement('canvas');
             cleanCanvas.width = canvas.width;
             cleanCanvas.height = canvas.height;
             const cleanCtx = cleanCanvas.getContext('2d');
             
-            // Fill with transparent background instead of white
-            cleanCtx.clearRect(0, 0, cleanCanvas.width, cleanCanvas.height);
-            
-            // Get pixel data to process
+            // Get the pixel data from temp canvas
             const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
             const data = imageData.data;
             
-            // Create a new image data object for the clean version
+            // Create a blank image data for clean canvas
             const cleanImageData = cleanCtx.createImageData(cleanCanvas.width, cleanCanvas.height);
             const cleanData = cleanImageData.data;
             
-            // Color ranges for the ruled lines and background
+            // Color detection function for ruled lines and background
             const isBackgroundOrLine = (r, g, b) => {
                 // Check if it's the white/off-white background
-                const isWhitish = r > 250 && g > 250 && b > 248;
+                const isWhitish = r > 245 && g > 245 && b > 240;
                 
                 // Check if it's a blue ruled line (approximate)
-                const isRuledLine = r > 165 && r < 180 && g > 210 && g < 225 && b > 225 && b < 240;
+                const isRuledLine = r > 165 && r < 190 && g > 205 && g < 235 && b > 225 && b < 245;
                 
                 // Check if it's a red margin line (approximate)
-                const isMarginLine = r > 250 && g < 10 && b < 10;
+                const isMarginLine = r > 230 && g < 30 && b < 30;
                 
                 return isWhitish || isRuledLine || isMarginLine;
             };
             
-            // Copy non-background, non-line pixels to the clean image
+            // Process each pixel
             for (let i = 0; i < data.length; i += 4) {
+                // Only keep pixels that are not background or lines and have opacity
                 if (!isBackgroundOrLine(data[i], data[i + 1], data[i + 2]) && data[i + 3] > 0) {
-                    cleanData[i] = data[i];       // R
-                    cleanData[i + 1] = data[i + 1];   // G
-                    cleanData[i + 2] = data[i + 2];   // B
-                    cleanData[i + 3] = data[i + 3];   // A
+                    cleanData[i] = data[i];         // R
+                    cleanData[i + 1] = data[i + 1]; // G
+                    cleanData[i + 2] = data[i + 2]; // B
+                    cleanData[i + 3] = data[i + 3]; // A
                 }
             }
             
-            // Put the processed image data onto the clean canvas
+            // Put the processed data onto the clean canvas
             cleanCtx.putImageData(cleanImageData, 0, 0);
             
             return cleanCanvas;

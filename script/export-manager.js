@@ -6,36 +6,52 @@ function initExportManager(appState, canvasHandler) {
     return {
         // Generate blog preview using only the user drawings (no ruled lines)
         generatePreview: function() {
-            // Save current page first (handled by getAllPages)
+            // First, ensure the current page is captured
+            const currentPageIndex = pages.currentPage - 1;
+            pages.userDrawings[currentPageIndex] = canvasHandler.captureUserDrawings();
+            
+            // Get all pages data including the newly captured current page
             const pageData = appState.pageManager.getAllPages();
             
             let blogHTML = '';
+            let hasContent = false;
             
-            if (pageData.totalPages === 0 || (pageData.userDrawings.every(drawing => drawing === null))) {
-                blogHTML = '<p>Your handwritten blog will be published as-is, preserving your natural writing style.</p>';
-            } else {
-                for (let i = 0; i < pageData.totalPages; i++) {
-                    const pageNum = i + 1;
-                    
+            // Generate HTML for each page with content
+            for (let i = 0; i < pageData.totalPages; i++) {
+                if (pageData.userDrawings[i]) {
                     // Get image URL for this page
                     const imageUrl = appState.pageManager.generatePagePreview(i);
                     
                     if (imageUrl) {
-                        // Add image to the preview
+                        hasContent = true;
                         blogHTML += `
-                            <img src="${imageUrl}" alt="Handwritten content page ${pageNum}">
+                            <img src="${imageUrl}" alt="Handwritten content page ${i+1}">
                         `;
                     }
                 }
             }
             
+            // If no content was found, show default message
+            if (!hasContent) {
+                blogHTML = '<p>Your handwritten blog will be published as-is, preserving your natural writing style.</p>';
+            }
+            
             // Update the preview
             blogPreview.innerHTML = blogHTML;
+            
+            // Restore ruled lines in the editor after preview generation
+            setTimeout(() => {
+                canvasHandler.redrawCanvas();
+            }, 50);
         },
         
         // Save all pages as a combined SVG file
         saveCombinedSvg: function() {
-            // Save current page first (handled by getAllPages)
+            // First, ensure the current page is captured
+            const currentPageIndex = pages.currentPage - 1;
+            pages.userDrawings[currentPageIndex] = canvasHandler.captureUserDrawings();
+            
+            // Get all pages data
             const pageData = appState.pageManager.getAllPages();
             
             // Get the title for the filename
@@ -202,12 +218,18 @@ function initExportManager(appState, canvasHandler) {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
+            // Show success message and restore ruled lines
             appState.utils.showToast(`SVG saved as "${filename}"`);
+            
+            // Ensure editor canvas still shows ruled lines
+            setTimeout(() => {
+                canvasHandler.redrawCanvas();
+            }, 50);
         },
         
         // Publish blog as HTML
         publishBlog: function() {
-            // Generate preview to ensure current state is saved
+            // First generate the preview to ensure everything is saved
             this.generatePreview();
             
             const title = blogTitle.value || 'Untitled Blog';
@@ -266,17 +288,27 @@ function initExportManager(appState, canvasHandler) {
     </header>`;
     
             // Add each page to the HTML
+            let hasContent = false;
             for (let i = 0; i < pageData.totalPages; i++) {
                 // Get image URL for this page
                 const imageUrl = appState.pageManager.generatePagePreview(i);
                 
                 if (imageUrl) {
+                    hasContent = true;
                     // Add to HTML
                     blogHTML += `
     <div class="page">
         <img src="${imageUrl}" alt="Page ${i+1}">
     </div>`;
                 }
+            }
+            
+            // If no content, add a message
+            if (!hasContent) {
+                blogHTML += `
+    <div class="page">
+        <p style="text-align: center; padding: 50px;">This blog has no content yet.</p>
+    </div>`;
             }
             
             // Close HTML
@@ -302,7 +334,13 @@ function initExportManager(appState, canvasHandler) {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
+            // Show success message
             appState.utils.showToast(`Blog "${title}" published!`);
+            
+            // Ensure editor canvas still shows ruled lines
+            setTimeout(() => {
+                canvasHandler.redrawCanvas();
+            }, 50);
         }
     };
 }
